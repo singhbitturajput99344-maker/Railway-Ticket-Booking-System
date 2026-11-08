@@ -96,13 +96,20 @@ class Booking {
     private final TrainInfo train;
     private final Date journeyDate;
     private final ArrayList<Passenger> passengers;
+    private final String travelClass;
     private String status;
 
     public Booking(long pnrNumber, TrainInfo train, Date journeyDate, ArrayList<Passenger> passengers) {
+        this(pnrNumber, train, journeyDate, passengers, "Sleeper (SL)");
+    }
+
+    public Booking(long pnrNumber, TrainInfo train, Date journeyDate,
+                   ArrayList<Passenger> passengers, String travelClass) {
         this.pnrNumber = pnrNumber;
         this.train = train;
         this.journeyDate = new Date(journeyDate.getTime());
         this.passengers = new ArrayList<>(passengers);
+        this.travelClass = travelClass;
         this.status = "Confirmed";
     }
 
@@ -120,6 +127,10 @@ class Booking {
 
     public ArrayList<Passenger> getPassengers() {
         return new ArrayList<>(passengers);
+    }
+
+    public String getTravelClass() {
+        return travelClass;
     }
 
     public String getStatus() {
@@ -141,6 +152,9 @@ public class RailwayGUI {
     };
     private static final String[] SEAT_OPTIONS = {
             "No Preference", "Lower", "Middle", "Upper", "Side Lower", "Side Upper"
+    };
+    private static final String[] TRAVEL_CLASS_OPTIONS = {
+            "Sleeper (SL)", "Third AC (3A)", "Second AC (2A)", "First AC (1A)"
     };
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("dd MMM yyyy");
 
@@ -385,6 +399,7 @@ public class RailwayGUI {
                 .append("Train            : ").append(train.trainNo).append(" - ").append(train.trainName).append('\n')
                 .append("Journey          : ").append(train.source).append(" -> ").append(train.destination).append('\n')
                 .append("Journey Date     : ").append(DATE_FORMAT.format(booking.getJourneyDate())).append('\n')
+                .append("Travel Class     : ").append(booking.getTravelClass()).append('\n')
                 .append("Booking Status   : ").append(booking.getStatus()).append('\n')
                 .append("Total Passengers : ").append(passengers.size()).append('\n')
                 .append("------------------------------------------------------------\n")
@@ -472,6 +487,7 @@ public class RailwayGUI {
         private final JLabel countLabel = new JLabel();
         private final JSpinner journeyDateSpinner = new JSpinner(
                 new SpinnerDateModel(new Date(), new Date(), null, Calendar.DAY_OF_MONTH));
+        private final JComboBox<String> travelClassCombo = new JComboBox<>(TRAVEL_CLASS_OPTIONS);
         private JScrollPane entriesScrollPane;
 
         BookingDialog(TrainInfo train) {
@@ -510,8 +526,13 @@ public class RailwayGUI {
             dateLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
             journeyDateSpinner.setEditor(new JSpinner.DateEditor(journeyDateSpinner, "dd MMM yyyy"));
             journeyDateSpinner.setPreferredSize(new Dimension(145, 30));
+            JLabel travelClassLabel = new JLabel("Travel class:");
+            travelClassLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+            travelClassCombo.setPreferredSize(new Dimension(155, 30));
             dateRow.add(dateLabel);
             dateRow.add(journeyDateSpinner);
+            dateRow.add(travelClassLabel);
+            dateRow.add(travelClassCombo);
             heading.add(dateRow);
             root.add(heading, BorderLayout.NORTH);
 
@@ -651,10 +672,13 @@ public class RailwayGUI {
             table.setPreferredSize(new Dimension(820, Math.min(280, 55 + passengers.size() * 26)));
 
             JPanel reviewPanel = new JPanel(new BorderLayout(0, 10));
-            reviewPanel.add(new JLabel("Train: " + train.trainNo + " - " + train.trainName
+            JPanel bookingSummary = new JPanel();
+            bookingSummary.setLayout(new BoxLayout(bookingSummary, BoxLayout.Y_AXIS));
+            bookingSummary.add(new JLabel("Train: " + train.trainNo + " - " + train.trainName
                     + " (" + train.source + " to " + train.destination + ")"
-                    + " | Journey date: " + DATE_FORMAT.format((Date) journeyDateSpinner.getValue())),
-                    BorderLayout.NORTH);
+                    + " | Journey date: " + DATE_FORMAT.format((Date) journeyDateSpinner.getValue())));
+            bookingSummary.add(new JLabel("Travel class: " + travelClassCombo.getSelectedItem()));
+            reviewPanel.add(bookingSummary, BorderLayout.NORTH);
             reviewPanel.add(table, BorderLayout.CENTER);
             reviewPanel.add(new JLabel("Confirm one booking and one common PNR for "
                     + passengers.size() + " passenger(s)?"), BorderLayout.SOUTH);
@@ -685,7 +709,8 @@ public class RailwayGUI {
             }
 
             Booking booking = new Booking(createUniquePnr(), train,
-                    (Date) journeyDateSpinner.getValue(), confirmedPassengers);
+                    (Date) journeyDateSpinner.getValue(), confirmedPassengers,
+                    (String) travelClassCombo.getSelectedItem());
             bookings.add(booking);
             train.availableSeats -= confirmedPassengers.size();
             refreshTrainTable();
@@ -733,6 +758,7 @@ public class RailwayGUI {
             details.setBackground(Color.WHITE);
             addTicketDetail(details, "PNR NUMBER", String.valueOf(booking.getPnrNumber()));
             addTicketDetail(details, "BOOKING STATUS", booking.getStatus());
+            addTicketDetail(details, "TRAVEL CLASS", booking.getTravelClass());
             addTicketDetail(details, "TRAIN", bookedTrain.trainNo + " - " + bookedTrain.trainName);
             addTicketDetail(details, "JOURNEY DATE", DATE_FORMAT.format(booking.getJourneyDate()));
             addTicketDetail(details, "FROM", bookedTrain.source);
